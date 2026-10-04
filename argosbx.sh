@@ -45,6 +45,7 @@ export ARGO_AUTH=${agk:-''}
 export ippz=${ippz:-''}
 export warp=${warp:-''}
 export name=${name:-''}
+export ansni=${ansni:-''}
 export oap=${oap:-''}
 v46url="https://icanhazip.com"
 agsbxurl="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
@@ -1836,10 +1837,11 @@ echo "\"${sxname}naive-h3-$hostname\","
 echo "\"${sxname}naive-h2-$hostname\","
 }
 fi
+an_sni=${ansni:-$sni}
 if grep anytls-sb "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
 echo "💣【 AnyTLS 】节点信息如下："
 port_an=$(cat "$HOME/agsbx/port_an")
-an_link="anytls://$uuid@$add:$port_an?sni=$sni&insecure=$jhins&allowInsecure=$jhins#${sxname}anytls-$hostname"
+an_link="anytls://$uuid@$add:$port_an?sni=$an_sni&insecure=$jhins&allowInsecure=$jhins#${sxname}anytls-$hostname"
 echo "$an_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$an_link"
 echo
@@ -1857,7 +1859,7 @@ cat <<EOF
             "tls": {
                 "enabled": true,
                 "insecure": $msins,
-                "server_name": "$sni"
+                "server_name": "$an_sni"
             }
          },
 EOF
@@ -1876,7 +1878,7 @@ cat <<EOF
   udp: true
   idle-session-check-interval: 30
   idle-session-timeout: 30
-  sni: $sni
+  sni: $an_sni
   skip-cert-verify: $msins
 EOF
 }
