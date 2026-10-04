@@ -1836,7 +1836,7 @@ echo "\"${sxname}naive-h3-$hostname\","
 echo "\"${sxname}naive-h2-$hostname\","
 }
 fi
-an_sni=${ansni:-$sni}
+an_sni=${ansni:-${ym_vl_re:-$sni}}
 if grep anytls-sb "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
 echo "💣【 AnyTLS 】节点信息如下："
 port_an=$(cat "$HOME/agsbx/port_an")
