@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ArgoSBX一键SSH命令生成器-甬哥ygkkk</title>
+  <title>K</title>
   <style>
     :root {
       --bg:#0b1020;
@@ -387,16 +387,9 @@
           </svg>
         </label>
       </div>
-      <h1>ArgoSBX小钢炮脚本💣一键SSH命令生成器 V26.7.16</h1>
+      <h1>K</h1>
       <p>
-        甬哥Github项目：
-        <a href="https://github.com/yonggekkk" target="_blank">github.com/yonggekkk</a><br>
-        甬哥Blogger博客：
-        <a href="https://ygkkk.blogspot.com" target="_blank">ygkkk.blogspot.com</a><br>
-        甬哥YouTube频道：
-        <a href="https://www.youtube.com/@ygkkk" target="_blank">www.youtube.com/@ygkkk</a><br>
-        甬哥最新动态推特X：
-        <a href="https://x.com/ygkkkg" target="_blank">x.com/ygkkkg</a><br>
+        基于开源项目 <a href="https://github.com/yonggekkk/argosbx" target="_blank">ArgoSBX</a> 修改（GPL-3.0）
       </p>
     </header>
 
@@ -406,7 +399,7 @@
         <div class="protocol-group separator">
           <h3>Xray可选协议：</h3>
           <div class="protocol-grid">
-            <label><input type="checkbox" data-proto="vlpt"> Vless-tcp-reality-vision <span class="pill">vlpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vlpt">
+            <label><input type="checkbox" data-proto="vlpt" checked> Vless-tcp-reality-vision <span class="pill">vlpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vlpt">
             <label><input type="checkbox" data-proto="xhpt"> Vless-xhttp-reality-enc <span class="pill">xhpt</span></label><input type="text" placeholder="留空则随机端口" data-port="xhpt">
             <label><input type="checkbox" data-proto="vxpt"> Vless-xhttp-enc <span class="pill">vxpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vxpt">
             <label><input type="checkbox" data-proto="vwpt"> Vless-ws-enc <span class="pill">vwpt</span></label><input type="text" placeholder="留空则随机端口（Argo固定隧道的URL端口相同）" data-port="vwpt">
@@ -417,8 +410,8 @@
         <div class="protocol-group separator">
           <h3>Singbox可选协议：</h3>
           <div class="protocol-grid">
-            <label><input type="checkbox" data-proto="tupt"> Tuic <span class="pill">tupt</span></label><input type="text" placeholder="留空则随机端口" data-port="tupt">
-            <label><input type="checkbox" data-proto="anpt"> AnyTLS <span class="pill">anpt</span></label><input type="text" placeholder="留空则随机端口" data-port="anpt">
+            <label><input type="checkbox" data-proto="tupt" checked> Tuic <span class="pill">tupt</span></label><input type="text" placeholder="留空则随机端口" data-port="tupt">
+            <label><input type="checkbox" data-proto="anpt" checked> AnyTLS <span class="pill">anpt</span></label><input type="text" placeholder="留空则随机端口" data-port="anpt">
             <label><input type="checkbox" data-proto="nvpt" disabled> Naiveproxy <span class="pill">nvpt</span></label><input type="text" placeholder="启用域名IP证书TLS后可选，留空则随机端口" data-port="nvpt" disabled>
             <label><input type="checkbox" data-proto="arpt"> Any-reality <span class="pill">arpt</span></label><input type="text" placeholder="留空则随机端口" data-port="arpt">
             <label><input type="checkbox" data-proto="sspt"> Shadowsocks-2022 <span class="pill">sspt</span></label><input type="text" placeholder="留空则随机端口" data-port="sspt">
@@ -443,7 +436,8 @@
             <button id="generateUuidBtn" type="button" class="primary">生成 UUID</button>
           </div>
         </div>
-        <div class="row"><label>Reality 域名 <span class="pill">reym</span></label><input id="reym" type="text" placeholder="选择Reality相关协议后可用，留空默认apple.com" disabled/></div>
+        <div class="row"><label>Reality 域名 <span class="pill">reym</span></label><input id="reym" type="text" placeholder="选择Reality相关协议后可用，留空默认apple.com" value="swcdn.apple.com" disabled/></div>
+        <div class="row"><label>AnyTLS 自定义网址 <span class="pill">ansni</span></label><input id="ansni" type="text" placeholder="留空则默认 www.bing.com"/></div>
         <div class="row"><label>CDN优选IP域名 <span class="pill">cfip</span></label><input id="cfip" type="text" placeholder="支持2个优选IP域名(空格间隔)，留空默认优选域名" disabled></div>
         <div class="row"><label>启用域名IP证书TLS <span class="pill">alns</span></label>
           <select id="alns">
@@ -497,7 +491,7 @@
           <label>启用订阅链接 <span class="pill">sub</span></label>
           <select id="sub">
             <option value="">默认 关闭 (仅显示单节点分享链接)</option>
-            <option value="y">开启</option>
+            <option value="y" selected>开启</option>
           </select>
         </div>
         <div class="row">
@@ -568,10 +562,11 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
 
 <script>
 (function(){
-  const CURL = 'bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh)';
-  const WGET = 'bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh)';
+  // 安装脚本地址：改成你自己 fork 后的 raw 地址
+  const CURL = 'bash <(curl -Ls https://raw.githubusercontent.com/starkay711/argosbx/main/argosbx.sh)';
+  const WGET = 'bash <(wget -qO- https://raw.githubusercontent.com/starkay711/argosbx/main/argosbx.sh)';
   const protoKeys = ['sopt','vmpt','vlpt','xhpt','vxpt','vwpt','xupt','xcpt','hypt','tupt','nvpt','anpt','arpt','sspt'];
-  const optIds = ['warp','ippz','uuid','reym','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt'];
+  const optIds = ['warp','ippz','uuid','reym','ansni','cfip','alns','hyjpt','cdnym','name', 'oap', 'sub', 'subid', 'subpt'];
 
   const argoSelect = document.getElementById('argoSelect');
   const agn = document.getElementById('agn');
@@ -803,7 +798,7 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
     const keys = Object.keys(m);
     const ordered = [];
     protoKeys.forEach(k => { if (keys.includes(k)) ordered.push(k); });
-    ['warp', 'uuid', 'reym', 'cfip', 'alns', 'hyjpt', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
+    ['warp', 'uuid', 'reym', 'ansni', 'cfip', 'alns', 'hyjpt', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
     if (keys.includes('argo')) ordered.push('argo');
     if (keys.includes('agn')) ordered.push('agn');
     if (keys.includes('agk')) ordered.push('agk');
