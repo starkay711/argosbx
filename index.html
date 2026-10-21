@@ -470,7 +470,8 @@
         
         <div class="row"><label>IPv4/IPv6 配置导出 <span class="pill">ippz</span></label>
           <select id="ippz">
-            <option value="">默认 自动</option>
+            <option value="46" selected>默认 导出 IPv4+IPv6（双栈）</option>
+            <option value="">自动（单栈最佳）</option>
             <option value="4">导出 IPv4</option>
             <option value="6">导出 IPv6</option>
           </select>
@@ -921,7 +922,7 @@ Acme-yg域名IP证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/
       const command = btn.getAttribute('data-command');
       const ippzValue = ippzSelect.value;
       const selectedCommand = document.querySelector('input[name="commandType"]:checked').value === 'curl' ? CURL : WGET;
-      const shouldPreserveIppz = (command === 'list' && (ippzValue === '4' || ippzValue === '6'));
+      const shouldPreserveIppz = (command === 'list' && (ippzValue === '4' || ippzValue === '6' || ippzValue === '46'));
 
       if (command === 'rep') {
         const m = collectVars();
