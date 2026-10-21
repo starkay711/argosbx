@@ -58,7 +58,7 @@ echo "更新脚本命令：原已安装的自定义各种协议变量组 主脚�
 echo "更新Xray或Singbox内核命令：agsbx upx或ups 【或者】 主脚本 upx或ups"
 echo "重启脚本命令：agsbx res 【或者】 主脚本 res"
 echo "卸载脚本命令：agsbx del 【或者】 主脚本 del"
-echo "双栈VPS显示IPv4/IPv6节点配置命令：ippz=4或6 agsbx list 【或者】 ippz=4或6 主脚本 list"
+echo "双栈VPS显示IPv4/IPv6节点配置命令：ippz=4或6（单栈）或46（双栈都导出） agsbx list 【或者】 ippz=4或6或46 主脚本 list"
 echo "申请本地IP域名证书脚本：bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/acme-yg/main/acme.sh)"
 echo "---------------------------------------------------------"
 echo
@@ -1326,6 +1326,34 @@ echo "Argo：未启用"
 fi
 }
 cip(){
+if [ "$ippz" = "46" ] && [ -z "$_ippz46" ]; then
+_ippz46=1
+v4v6
+if [ -n "$v4" ] && [ -n "$v6" ]; then
+sxadd="-IPv4" ippz=4 cip
+cp -f "$HOME/agsbx/sbox.json" "$HOME/agsbx/sbox-v4.json" 2>/dev/null
+cp -f "$HOME/agsbx/clmi.yaml" "$HOME/agsbx/clmi-v4.yaml" 2>/dev/null
+sxadd="-IPv6" jhkeep=1 ippz=6 cip
+cp -f "$HOME/agsbx/sbox.json" "$HOME/agsbx/sbox-v6.json" 2>/dev/null
+cp -f "$HOME/agsbx/clmi.yaml" "$HOME/agsbx/clmi-v6.yaml" 2>/dev/null
+_subtok=$(cat "$HOME/agsbx/subtoken.log" 2>/dev/null)
+if [ -n "$_subtok" ]; then
+ln -sf "$HOME/agsbx/sbox-v4.json" "$HOME/websbx/$_subtok/sbox-v4.json" 2>/dev/null
+ln -sf "$HOME/agsbx/sbox-v6.json" "$HOME/websbx/$_subtok/sbox-v6.json" 2>/dev/null
+ln -sf "$HOME/agsbx/clmi-v4.yaml" "$HOME/websbx/$_subtok/clmi-v4.yaml" 2>/dev/null
+ln -sf "$HOME/agsbx/clmi-v6.yaml" "$HOME/websbx/$_subtok/clmi-v6.yaml" 2>/dev/null
+fi
+echo "========================================================="
+echo "双栈导出完成：jhsub.txt 已含 IPv4+IPv6 全部节点（节点名带 -IPv4/-IPv6 后缀区分）"
+echo "Sing-box 双栈文件：sbox-v4.json / sbox-v6.json；Clash 双栈文件：clmi-v4.yaml / clmi-v6.yaml（与原订阅同目录，替换文件名即可访问）"
+echo "========================================================="
+elif [ -n "$v6" ]; then
+ippz=6 cip
+else
+ippz=4 cip
+fi
+return
+fi
 ipbest(){
 serip=$( (command -v curl >/dev/null 2>&1 && (curl -s4m5 -k "$v46url" 2>/dev/null || curl -s6m5 -k "$v46url" 2>/dev/null) ) || (command -v wget >/dev/null 2>&1 && (timeout 3 wget -4 -qO- --tries=2 "$v46url" 2>/dev/null || timeout 3 wget -6 -qO- --tries=2 "$v46url" 2>/dev/null) ) )
 if echo "$serip" | grep -q ':'; then
@@ -1385,10 +1413,11 @@ ipbest
 fi
 }
 ipchange
-rm -rf "$HOME/agsbx/jhsub.txt"
+[ -n "$jhkeep" ] || rm -rf "$HOME/agsbx/jhsub.txt"
 uuid=$(cat "$HOME/agsbx/uuid")
 server_ip=$(cat "$HOME/agsbx/server_ip.log")
 sxname=$(cat "$HOME/agsbx/name" 2>/dev/null)
+[ -n "$sxadd" ] && sxname="${sxname}${sxadd}"
 xvvmcdnym=$(cat "$HOME/agsbx/cdnym" 2>/dev/null)
 cdnip1=$(cat "$HOME/agsbx/cdnip1" 2>/dev/null)
 cdnip2=$(cat "$HOME/agsbx/cdnip2" 2>/dev/null)
@@ -1993,7 +2022,7 @@ fi
 if grep tuic5-sb "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
 echo "💣【 Tuic 】节点信息如下："
 port_tu=$(cat "$HOME/agsbx/port_tu")
-tuic5_link="tuic://$uuid:$uuid@$add:$port_tu?congestion_control=bbr&udp_relay_mode=native&alpn=h3&sni=$sni&insecure=$jhins&allowInsecure=$jhins&allow_insecure=$jhins#${sxname}tuic-$hostname"
+tuic5_link="tuic://$uuid:$uuid@$add:$port_tu?congestion_control=bbr&udp_relay_mode=native&alpn=h3&sni=$an_sni&insecure=$jhins&allowInsecure=$jhins&allow_insecure=$jhins#${sxname}tuic-$hostname"
 echo "$tuic5_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$tuic5_link"
 echo
@@ -2013,7 +2042,7 @@ cat <<EOF
             "heartbeat": "10s",
             "tls":{
                 "enabled": true,
-                "server_name": "$sni",
+                "server_name": "$an_sni",
                 "insecure": $msins,
                 "alpn": [
                     "h3"
@@ -2038,7 +2067,7 @@ cat <<EOF
   reduce-rtt: true
   udp-relay-mode: native
   congestion-controller: bbr
-  sni: $sni                                
+  sni: $an_sni                                
   skip-cert-verify: $msins
 EOF
 }
