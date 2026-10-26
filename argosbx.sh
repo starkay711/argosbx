@@ -82,11 +82,11 @@ mkdir -p "$HOME/agsbx"
 if [ ! -f sbx_update ]; then
 echo "执行必要的脚本依赖中，请稍等10秒……"
 if command -v apk >/dev/null 2>&1; then
-apk update >/dev/null 2>&1 && apk add --no-cache bash busybox-extras gcompat libc6-compat iptables openssl >/dev/null 2>&1
+apk update >/dev/null 2>&1 && apk add --no-cache bash busybox-extras gcompat libc6-compat iptables openssl qrencode >/dev/null 2>&1
 elif command -v apt >/dev/null 2>&1; then
 export DEBIAN_FRONTEND=noninteractive
 printf 'iptables-persistent iptables-persistent/autosave_v4 boolean true\niptables-persistent iptables-persistent/autosave_v6 boolean true\n' | debconf-set-selections
-apt update >/dev/null 2>&1 && apt install -y busybox coreutils util-linux iptables iptables-persistent cron openssl >/dev/null 2>&1
+apt update >/dev/null 2>&1 && apt install -y busybox coreutils util-linux iptables iptables-persistent cron openssl qrencode >/dev/null 2>&1
 fi
 touch sbx_update
 fi
@@ -2516,10 +2516,17 @@ echo "Clash/Mihomo本地IP订阅地址：http://$suburl/clmi.yaml"
 echo "Sing-box本地IP订阅地址：http://$suburl/sbox.json"
 echo "聚合协议本地IP订阅地址：http://$suburl/jhsub.txt"
 echo "小火箭订阅二维码（聚合协议订阅地址，扫码添加订阅）："
+if ! command -v qrencode >/dev/null 2>&1; then
+if command -v apk >/dev/null 2>&1; then
+apk update >/dev/null 2>&1 && apk add --no-cache qrencode >/dev/null 2>&1
+elif command -v apt >/dev/null 2>&1; then
+apt update >/dev/null 2>&1 && apt install -y qrencode >/dev/null 2>&1
+fi
+fi
 if command -v qrencode >/dev/null 2>&1; then
 qrencode -t ANSIUTF8 -m 1 "http://$suburl/jhsub.txt"
 else
-echo "（本机未安装 qrencode，未生成二维码，订阅地址见上）"
+echo "（qrencode 自动安装失败，未生成二维码，订阅地址见上）"
 fi
 echo "**********************************************************"
 fi
@@ -2586,6 +2593,11 @@ fi
 }
 if [ "$1" = "del" ]; then
 cleandel
+if command -v apk >/dev/null 2>&1; then
+apk del qrencode >/dev/null 2>&1
+elif command -v apt >/dev/null 2>&1; then
+apt remove -y qrencode >/dev/null 2>&1
+fi
 rm -rf sbx_update "$HOME/agsbx" "$HOME/websbx"
 echo "卸载完成"
 echo "欢迎继续使用甬哥侃侃侃ygkkk的Argosbx一键无交互小钢炮脚本💣" && sleep 2
