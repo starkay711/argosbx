@@ -2515,6 +2515,12 @@ echo "**********************************************************"
 echo "Clash/Mihomo本地IP订阅地址：http://$suburl/clmi.yaml"
 echo "Sing-box本地IP订阅地址：http://$suburl/sbox.json"
 echo "聚合协议本地IP订阅地址：http://$suburl/jhsub.txt"
+echo "小火箭订阅二维码（聚合协议订阅地址，扫码添加订阅）："
+if command -v qrencode >/dev/null 2>&1; then
+qrencode -t ANSIUTF8 -m 1 "http://$suburl/jhsub.txt"
+else
+echo "（本机未安装 qrencode，未生成二维码，订阅地址见上）"
+fi
 echo "**********************************************************"
 fi
 fi
