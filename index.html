@@ -539,7 +539,11 @@
         <div class="tabs">
           <h2>复制下方命令到服务器SSH回车一次即可。建议保存该命令，后续可粘贴回这里直接修改配置。</h2>
         </div>
-        <div class="command-type-row">
+        <div class="command-type-row" id="dockerModeRow">
+            <label style="margin-bottom: 0;"><input type="checkbox" id="dockerMode"> Docker 模式（勾选后输出 docker run 命令，代替 SSH 一键命令）</label>
+        </div>
+        <p id="dockerNote" style="display:none;margin:6px 0;font-size:13px">Docker 模式使用 --network host，端口与 SSH 版一致，无需映射；订阅、Argo 等变量原样传入；oap 在 Docker 模式下不适用，已自动忽略；已安装脚本的快捷命令在 Docker 模式下不可用。留空的协议端口会自动分配一个随机端口，安装脚本会把这个端口自动放行，卸载命令会把同一批端口自动关闭。</p>
+        <div class="command-type-row" id="commandTypeRow">
             <label>命令类型选择：</label>
             <label style="margin-bottom: 0;"><input type="radio" name="commandType" value="curl" checked> curl</label>
             <label style="margin-bottom: 0;"><input type="radio" name="commandType" value="wget"> wget</label>
@@ -548,6 +552,13 @@
         <div class="actions">
           <button id="reset">重置</button>
           <button id="copy">复制</button>
+        </div>
+        <div id="dockerUninstallSection" style="display:none;margin-top:14px">
+          <p style="margin:6px 0">Docker 卸载命令（先删容器，再自动关闭上面这批端口，粘贴一次即可）：</p>
+          <textarea id="dockerUninstallOutput" spellcheck="false" readonly style="min-height:120px"></textarea>
+          <div class="actions">
+            <button id="copyDockerUninstall">复制卸载命令</button>
+          </div>
         </div>
         <div id="qrblock" style="margin-top:14px">
           <p style="margin:6px 0">小火箭订阅二维码（扫码添加订阅）：</p>
@@ -640,6 +651,16 @@ updateQr();
   const uuidInput = document.getElementById('uuid');
   const themeSwitchCheckbox = document.getElementById('theme-switch-checkbox');
   const commandTypeRadios = document.querySelectorAll('input[name="commandType"]');
+  const dockerModeCheckbox = document.getElementById('dockerMode');
+  const dockerNote = document.getElementById('dockerNote');
+  const commandTypeRow = document.getElementById('commandTypeRow');
+  const dockerUninstallSection = document.getElementById('dockerUninstallSection');
+  const dockerUninstallOutput = document.getElementById('dockerUninstallOutput');
+  const outHeading = document.querySelector('.card.out .tabs h2');
+  const outHeadingOriginal = outHeading ? outHeading.textContent : '';
+  // Docker 模式下留空端口的随机分配缓存：同一配置下不重复变号，安装与卸载才能对上同一批端口。
+  const dockerRandomPorts = {};
+  const dockerReservedPorts = [22, 80, 443, 3000, 3306, 5432, 6379, 8080, 8443, 8888, 9000, 9090, 10000, 14045, 26554];
 
   let isUpdatingFromOutput = false;
 
@@ -700,7 +721,10 @@ updateQr();
     updateSubState();
     argoSelect.value = '';
     updateArgoState('');
+    if (dockerModeCheckbox) dockerModeCheckbox.checked = false;
+    Object.keys(dockerRandomPorts).forEach(k => delete dockerRandomPorts[k]);
     updateDynamicInputs();
+    updateDockerState();
   }
 
   function updateDynamicInputs() {
@@ -803,6 +827,10 @@ updateQr();
     radio.addEventListener('change', render);
   });
 
+  if (dockerModeCheckbox) {
+    dockerModeCheckbox.addEventListener('change', updateDockerState);
+  }
+
   function collectVars(){
     const m = {};
     protoKeys.forEach(k => {
@@ -853,9 +881,134 @@ updateQr();
     }).join(' ');
   }
 
+  function dockerTransports(proto){
+    if (proto === 'hypt' || proto === 'tupt') return ['udp'];
+    if (proto === 'xcpt') return ['tcp', 'udp'];
+    return ['tcp'];
+  }
+
+  function getDockerEffectivePorts(m){
+    // 返回 {proto: port}：填了的用填的，留空的用缓存里的随机端口，没有缓存就新分配一个。
+    // 订阅口 subpt 也一样：留空则容器内随机，宿主机放行就对不上，所以 Docker 模式下同样自动分配。
+    const used = new Set(dockerReservedPorts);
+    Object.keys(m).forEach(k => { if (m[k] && /^\d+$/.test(m[k])) used.add(parseInt(m[k], 10)); });
+    const effective = {};
+    protoKeys.forEach(k => {
+      if (!(k in m)) return;
+      if (m[k] && /^\d+$/.test(m[k])) { effective[k] = m[k]; return; }
+      if (dockerRandomPorts[k] && !used.has(dockerRandomPorts[k])) { effective[k] = String(dockerRandomPorts[k]); used.add(dockerRandomPorts[k]); return; }
+      let p = 0;
+      for (let tries = 0; tries < 500 && p === 0; tries++) {
+        const cand = 10000 + Math.floor(Math.random() * 50000);
+        if (!used.has(cand)) p = cand;
+      }
+      if (p === 0) p = 20000 + Object.keys(effective).length;
+      dockerRandomPorts[k] = p;
+      effective[k] = String(p);
+      used.add(p);
+    });
+    if (m['sub'] === 'y') {
+      if (m['subpt'] && /^\d+$/.test(m['subpt'])) { effective['__subpt'] = m['subpt']; }
+      else if (dockerRandomPorts['__subpt'] && !used.has(dockerRandomPorts['__subpt'])) { effective['__subpt'] = String(dockerRandomPorts['__subpt']); }
+      else {
+        let p = 0;
+        for (let tries = 0; tries < 500 && p === 0; tries++) {
+          const cand = 10000 + Math.floor(Math.random() * 50000);
+          if (!used.has(cand)) p = cand;
+        }
+        dockerRandomPorts['__subpt'] = p || 20099;
+        effective['__subpt'] = String(dockerRandomPorts['__subpt']);
+      }
+    }
+    // 清掉已取消协议的缓存，免得卸载时关错端口。
+    Object.keys(dockerRandomPorts).forEach(k => {
+      if (k !== '__subpt' && !(k in m)) delete dockerRandomPorts[k];
+      if (k === '__subpt' && m['sub'] !== 'y') delete dockerRandomPorts['__subpt'];
+    });
+    return effective;
+  }
+
+  function dockerFirewallLines(effective, action){
+    // action: 'open' 或 'close'。按 nftables / ufw / iptables 顺序自动识别，机器上哪种防火墙就走哪种。
+    // nftables 关闭用 handle 定位：先按“tcp dport 端口 accept”找 handle 再删，避免删错规则。
+    const lines = [];
+    const items = [];
+    Object.keys(effective).forEach(k => {
+      const port = effective[k];
+      const protos = k === '__subpt' ? ['tcp'] : dockerTransports(k);
+      protos.forEach(t => items.push(port + '/' + t));
+    });
+    if (items.length === 0) return [];
+    items.forEach(item => {
+      const port = item.split('/')[0];
+      const proto = item.split('/')[1];
+      if (action === 'open') {
+        lines.push('if command -v nft >/dev/null 2>&1; then nft add rule inet filter input ' + proto + ' dport ' + port + ' accept 2>/dev/null || true; elif command -v ufw >/dev/null 2>&1; then ufw allow ' + port + '/' + proto + ' >/dev/null 2>&1 || true; elif command -v iptables >/dev/null 2>&1; then iptables -C INPUT -p ' + proto + ' --dport ' + port + ' -j ACCEPT 2>/dev/null || iptables -I INPUT -p ' + proto + ' --dport ' + port + ' -j ACCEPT; fi');
+      } else {
+        lines.push('if command -v nft >/dev/null 2>&1; then _h=$(nft -a list chain inet filter input 2>/dev/null | grep "' + proto + ' dport ' + port + ' accept" | sed -n "s/.*# handle \\([0-9]*\\).*/\\1/p" | head -1); [ -n "$_h" ] && nft delete rule inet filter input handle $_h 2>/dev/null || true; elif command -v ufw >/dev/null 2>&1; then ufw delete allow ' + port + '/' + proto + ' >/dev/null 2>&1 || true; elif command -v iptables >/dev/null 2>&1; then iptables -D INPUT -p ' + proto + ' --dport ' + port + ' -j ACCEPT 2>/dev/null || true; fi');
+      }
+    });
+    return lines;
+  }
+
+  function toDockerCommand(m, effective){
+    // Docker 模式：变量与 SSH 版完全一致，仅把 bash 脚本调用换成 docker run。
+    // --network host 让容器直接用宿主机网络，随机端口、订阅口、Argo 等行为与 SSH 版一致，无需 -p 映射。
+    // oap（开放所有端口）是针对宿主机系统的操作，在容器里不适用，自动忽略。
+    // 留空的端口已由 effective 换成自动分配的随机端口，安装脚本先放行、再启动容器。
+    const eff = effective || getDockerEffectivePorts(m);
+    const dockerVars = {};
+    Object.keys(m).forEach(k => { if (k !== 'oap') dockerVars[k] = m[k]; });
+    // 关键：留空的协议端口必须用自动分配的随机端口覆盖掉空值，否则容器内部会再随机一次，
+    // 放行的端口和容器实际端口就对不上了。填了明确端口的，effective 里就是那个明确端口，不会变。
+    protoKeys.forEach(k => { if (k in eff) dockerVars[k] = eff[k]; });
+    if (eff['__subpt']) dockerVars['subpt'] = eff['__subpt'];
+    const keys = Object.keys(dockerVars);
+    const ordered = [];
+    protoKeys.forEach(k => { if (keys.includes(k)) ordered.push(k); });
+    ['warp', 'uuid', 'reym', 'ansni', 'cfip', 'alns', 'hyjpt', 'cdnym', 'name', 'ippz', 'sub', 'subid', 'subpt'].forEach(k => { if (keys.includes(k)) ordered.push(k); });
+    if (keys.includes('argo')) ordered.push('argo');
+    if (keys.includes('agn')) ordered.push('agn');
+    if (keys.includes('agk')) ordered.push('agk');
+    keys.forEach(k => { if (!ordered.includes(k)) ordered.push(k); });
+    const env = ordered.map(k => {
+      const val = dockerVars[k];
+      if (val === '') return `-e ${k}=""`;
+      return `-e ${k}="${String(val).replace(/"/g, '\\"')}"`;
+    }).join(' ');
+    const runLine = 'docker run -d --name argosbx --restart always --network host' + (env ? ' ' + env : '') + ' ygkkk/argosbx';
+    const openLines = dockerFirewallLines(eff, 'open');
+    if (openLines.length === 0) return runLine;
+    return '# 自动放行代理端口（安装前先放行，容器起来就能连）\n' + openLines.join('\n') + '\n' + runLine;
+  }
+
+  function toDockerUninstallCommand(m, effective){
+    const eff = effective || getDockerEffectivePorts(m);
+    const closeLines = dockerFirewallLines(eff, 'close');
+    const parts = ['docker rm -f argosbx 2>/dev/null || true'];
+    if (closeLines.length > 0) parts.push('# 自动关闭上面这批端口\n' + closeLines.join('\n'));
+    return parts.join('\n');
+  }
+
+  function updateDockerState(){
+    const isDocker = !!(dockerModeCheckbox && dockerModeCheckbox.checked);
+    if (dockerNote) dockerNote.style.display = isDocker ? 'block' : 'none';
+    if (commandTypeRow) commandTypeRow.style.display = isDocker ? 'none' : '';
+    if (dockerUninstallSection) dockerUninstallSection.style.display = isDocker ? 'block' : 'none';
+    document.querySelectorAll('.command-button').forEach(btn => { btn.disabled = isDocker; });
+    if (outHeading) outHeading.textContent = isDocker ? '复制下方命令到已装 Docker 的服务器回车一次即可（Docker 模式，自动放行端口）。' : outHeadingOriginal;
+    render();
+  }
+
   function render(){
-    if (isUpdatingFromOutput) return; 
+    if (isUpdatingFromOutput) return;
     const m = collectVars();
+    if (dockerModeCheckbox && dockerModeCheckbox.checked) {
+      const eff = getDockerEffectivePorts(m);
+      output.value = toDockerCommand(m, eff);
+      if (dockerUninstallOutput) dockerUninstallOutput.value = toDockerUninstallCommand(m, eff);
+      return;
+    }
     const vars = toBashVars(m);
     const selectedCommand = document.querySelector('input[name="commandType"]:checked').value === 'curl' ? CURL : WGET;
     output.value = (vars ? vars + ' ' : '') + selectedCommand;
@@ -864,6 +1017,12 @@ updateQr();
   function parseAndFillOutput() {
     const text = output.value.trim();
     if (!text) return;
+    // 粘贴回卸载命令时不反填表单：卸载命令里没有完整的 -e 变量，反填会把现有配置清空。
+    if (text.includes('docker rm')) return;
+
+    // 粘贴回 Docker 命令时，自动勾上 Docker 模式；粘贴回 SSH 命令时，自动取消。
+    // 变量名本身（如 vlpt="..."）两种命令通用，下面同一套正则即可解析。
+    if (dockerModeCheckbox) dockerModeCheckbox.checked = text.startsWith('docker run') || text.includes('docker run -d');
 
     isUpdatingFromOutput = true;
 
@@ -939,6 +1098,14 @@ updateQr();
       }
     });
 
+    // 只同步 Docker 模式的界面状态，不重算输出，以免覆盖用户刚粘贴的命令。
+    const isDockerPaste = !!(dockerModeCheckbox && dockerModeCheckbox.checked);
+    if (dockerNote) dockerNote.style.display = isDockerPaste ? 'block' : 'none';
+    if (commandTypeRow) commandTypeRow.style.display = isDockerPaste ? 'none' : '';
+    if (dockerUninstallSection) dockerUninstallSection.style.display = isDockerPaste ? 'block' : 'none';
+    document.querySelectorAll('.command-button').forEach(btn => { btn.disabled = isDockerPaste; });
+    if (outHeading) outHeading.textContent = isDockerPaste ? '复制下方命令到已装 Docker 的服务器回车一次即可（Docker 模式）。' : outHeadingOriginal;
+
     isUpdatingFromOutput = false;
   }
 
@@ -956,6 +1123,10 @@ updateQr();
   
   document.querySelectorAll('.command-button').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (dockerModeCheckbox && dockerModeCheckbox.checked) {
+        showToast('Docker 模式下快捷命令不可用，请先取消 Docker 模式');
+        return;
+      }
       const command = btn.getAttribute('data-command');
       const ippzValue = ippzSelect.value;
       const selectedCommand = document.querySelector('input[name="commandType"]:checked').value === 'curl' ? CURL : WGET;
@@ -984,6 +1155,12 @@ updateQr();
     const t = document.getElementById('output');
     t.select(); t.setSelectionRange(0, 99999);
     try { await navigator.clipboard.writeText(t.value); showToast('已复制到剪贴板'); } catch (e) { document.execCommand('copy'); showToast('已复制'); }
+  });
+
+  document.getElementById('copyDockerUninstall').addEventListener('click', async () => {
+    const t = document.getElementById('dockerUninstallOutput');
+    t.select(); t.setSelectionRange(0, 99999);
+    try { await navigator.clipboard.writeText(t.value); showToast('已复制卸载命令'); } catch (e) { document.execCommand('copy'); showToast('已复制'); }
   });
 
   document.getElementById('reset').addEventListener('click', () => { 
