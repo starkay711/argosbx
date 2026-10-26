@@ -470,8 +470,8 @@
         
         <div class="row"><label>IPv4/IPv6 配置导出 <span class="pill">ippz</span></label>
           <select id="ippz">
-            <option value="46">导出 IPv4+IPv6（双栈）</option>
-            <option value="" selected>默认 自动（单栈最佳）</option>
+            <option value="46" selected>导出 IPv4+IPv6（双栈）</option>
+            <option value="">默认 自动（单栈最佳）</option>
             <option value="4">导出 IPv4</option>
             <option value="6">导出 IPv6</option>
           </select>
@@ -687,7 +687,7 @@ updateQr();
     });
     document.getElementById('warp').value = '';
     if (!preserveIppz) {
-        ippzSelect.value = '';
+        ippzSelect.value = '46';
     }
     oapSelect.value = '';
     document.getElementById('uuid').value = '';
