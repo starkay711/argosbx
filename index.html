@@ -420,7 +420,7 @@
         <div class="protocol-group separator">
           <h3>自动(已选Xray则用Xray，否则Singbox)：</h3>
           <div class="protocol-grid">
-            <label><input type="checkbox" data-proto="hypt"> Hysteria2 <span class="pill">hypt</span></label><input type="text" placeholder="留空则随机端口" data-port="hypt">
+            <label><input type="checkbox" data-proto="hypt" checked> Hysteria2 <span class="pill">hypt</span></label><input type="text" placeholder="留空则随机端口" data-port="hypt">
             <label><input type="checkbox" data-proto="vmpt"> Vmess-ws <span class="pill">vmpt</span></label><input type="text" placeholder="留空则随机端口（Argo固定隧道的URL端口相同）" data-port="vmpt">
             <label><input type="checkbox" data-proto="sopt"> Socks5 <span class="pill">sopt</span></label><input type="text" placeholder="留空则随机端口" data-port="sopt">
           </div>
@@ -445,7 +445,7 @@
             <option value="y">开启 (HY2/TUIC/Naive/Anytls/Xhttp-tls为域名IP证书TLS)</option>
           </select>
         </div>
-        <div class="row"><label>Hysteria2端口跳跃 <span class="pill">hyjpt</span></label><input id="hyjpt" type="text" placeholder="支持多个范围端口与单端口混用(空格间隔)，例：123:456 789" disabled/></div>
+        <div class="row"><label>Hysteria2端口跳跃 <span class="pill">hyjpt</span></label><input id="hyjpt" type="text" placeholder="支持多个范围端口与单端口混用(空格间隔)，例：123:456 789" value="20000:25000"/></div>
         <div class="row"><label>CF解析IP的域名<span class="pill">cdnym</span></label><input id="cdnym" type="text" placeholder="Vmess-ws、Vless-xhttp/ws-enc启用80、回源CDN时可用" disabled/></div>
         <div class="row"><label>套WARP-IP出站 <span class="pill">warp</span></label>
           <select id="warp">
@@ -702,6 +702,7 @@
       const isHy2Enabled = hy2Checkbox.checked;
       hyjptInput.disabled = !isHy2Enabled;
       if (!isHy2Enabled) hyjptInput.value = '';
+      if (isHy2Enabled && !hyjptInput.value.trim()) hyjptInput.value = '20000:25000';
 
       const isCfipEnabled = vlessXhttpTlsCheckbox.checked || vlessWsVCheckbox.checked || vlessXhttpCheckbox.checked || vmessWsCheckbox.checked;
       cfip.disabled = !isCfipEnabled;
