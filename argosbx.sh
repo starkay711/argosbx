@@ -11,7 +11,8 @@ export LANG=en_US.UTF-8
 [ -z "${sspt+x}" ] || ssp=yes
 [ -z "${arpt+x}" ] || arp=yes
 [ -z "${sopt+x}" ] || sop=yes
-[ -z "${warp+x}" ] || wap=yes
+# 默认不装 WARP：只有 warp 被明确选了一个非空出战方式时才 wap=yes；warp="" 或未传都不装
+[ -n "${warp:-}" ] && wap=yes
 [ -z "${nvpt+x}" ] || nvp=yes
 [ -z "${xupt+x}" ] || xup=yes
 [ -z "${xcpt+x}" ] || xcp=yes
@@ -99,6 +100,9 @@ v6dq=$( (command -v curl >/dev/null 2>&1 && curl -s6m5 -k https://ip.fm | sed -n
 v4dq=$( (command -v curl >/dev/null 2>&1 && curl -s4m5 -k https://ip.fm | sed -n 's/.*Location: //p' 2>/dev/null) || (command -v wget >/dev/null 2>&1 && timeout 3 wget -4 --tries=2 -qO- https://ip.fm | grep '<span class="has-text-grey-light">Location:' | tail -n1 | sed -E 's/.*>Location: <\/span>([^<]+)<.*/\1/' 2>/dev/null) )
 }
 warpsx(){
+# 默认不装 WARP：只有明确选了出战方式（wap=yes）才去取 WARP 密钥；没选就不联网取、不安装
+pvk=''; wpv6=''; res='[]'
+if [ "$wap" = yes ]; then
 warpurl=$( (command -v curl >/dev/null 2>&1 && curl -sm5 -k https://warp.xijp.eu.org 2>/dev/null) || (command -v wget >/dev/null 2>&1 && timeout 3 wget --tries=2 -qO- https://warp.xijp.eu.org 2>/dev/null) )
 if [ -z "$warpurl" ] || printf '%s' "$warpurl" | grep -q html; then
 wpv6='2606:4700:110:8d8d:1845:c39f:2dd5:a03a'
@@ -108,6 +112,7 @@ else
 pvk=$(echo "$warpurl" | awk -F'：' '/Private_key/{print $2}' | xargs)
 wpv6=$(echo "$warpurl" | awk -F'：' '/IPV6/{print $2}' | xargs)
 res=$(echo "$warpurl" | awk -F'：' '/reserved/{print $2}' | xargs)
+fi
 fi
 if [ -n "$name" ]; then
 sxname=$name-
@@ -124,7 +129,7 @@ if [ "$wap" != yes ]; then
 s1outtag=direct; s2outtag=direct; x1outtag=direct; x2outtag=direct; xip='"::/0", "0.0.0.0/0"'; sip='"::/0", "0.0.0.0/0"'; wap=warpargo
 else
 case "$warp" in
-""|sx|xs) s1outtag=warp-out; s2outtag=warp-out; x1outtag=warp-out; x2outtag=warp-out; xip='"::/0", "0.0.0.0/0"'; sip='"::/0", "0.0.0.0/0"'; wap=warp ;;
+sx|xs) s1outtag=warp-out; s2outtag=warp-out; x1outtag=warp-out; x2outtag=warp-out; xip='"::/0", "0.0.0.0/0"'; sip='"::/0", "0.0.0.0/0"'; wap=warp ;;
 s ) s1outtag=warp-out; s2outtag=warp-out; x1outtag=direct; x2outtag=direct; xip='"::/0", "0.0.0.0/0"'; sip='"::/0", "0.0.0.0/0"'; wap=warp ;;
 s4) s1outtag=warp-out; s2outtag=direct; x1outtag=direct; x2outtag=direct; xip='"::/0", "0.0.0.0/0"'; sip='"0.0.0.0/0"'; wap=warp ;;
 s6) s1outtag=warp-out; s2outtag=direct; x1outtag=direct; x2outtag=direct; xip='"::/0", "0.0.0.0/0"'; sip='"::/0"'; wap=warp ;;
@@ -163,6 +168,71 @@ case "$warp" in *x4*) xryx='ForceIPv4' ;; *x*) xryx='ForceIPv6v4' ;; *) xryx='Fo
 elif [ "$v4_ok" != true ] && [ "$v6_ok" = true ]; then
 case "$warp" in *s6*|x) sbyx='ipv6_only' ;; *) sbyx='prefer_ipv4' ;; esac
 case "$warp" in *x6*) xryx='ForceIPv6' ;; *x*) xryx='ForceIPv4v6' ;; *) xryx='ForceIPv6v4' ;; esac
+fi
+# 默认不装 WARP：只有真正路由到 warp-out 时才生成 WARP 配置片段；没选就留空，xrsbout 不写 warp-out
+xwarp_outbounds=""
+sbwarp_endpoints="[]"
+if [ "$x1outtag" = "warp-out" ] || [ "$x2outtag" = "warp-out" ]; then
+xwarp_outbounds=",
+    {
+      \"tag\": \"x-warp-out\",
+      \"protocol\": \"wireguard\",
+      \"settings\": {
+        \"secretKey\": \"${pvk}\",
+        \"address\": [
+          \"172.16.0.2/32\",
+          \"${wpv6}/128\"
+        ],
+        \"peers\": [
+          {
+            \"publicKey\": \"bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\",
+            \"allowedIPs\": [
+              \"0.0.0.0/0\",
+              \"::/0\"
+            ],
+            \"endpoint\": \"${xendip}:2408\"
+          }
+        ],
+        \"reserved\": ${res}
+        }
+    },
+    {
+      \"tag\": \"warp-out\",
+      \"protocol\": \"freedom\",
+      \"settings\": {
+        \"domainStrategy\": \"${wxryx}\"
+      },
+      \"streamSettings\": {
+        \"sockopt\": {
+          \"dialerProxy\": \"x-warp-out\"
+        }
+      }
+    }"
+fi
+if [ "$s1outtag" = "warp-out" ] || [ "$s2outtag" = "warp-out" ]; then
+sbwarp_endpoints="[
+    {
+      \"type\": \"wireguard\",
+      \"tag\": \"warp-out\",
+      \"address\": [
+        \"172.16.0.2/32\",
+        \"${wpv6}/128\"
+      ],
+      \"private_key\": \"${pvk}\",
+      \"peers\": [
+        {
+          \"address\": \"${sendip}\",
+          \"port\": 2408,
+          \"public_key\": \"bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=\",
+          \"allowed_ips\": [
+            \"0.0.0.0/0\",
+            \"::/0\"
+          ],
+          \"reserved\": $res
+        }
+      ]
+    }
+  ]"
 fi
 }
 upxray(){
@@ -208,7 +278,7 @@ EOF
 insuuid
 if [ -n "$xhp" ] || [ -n "$vlp" ]; then
 if [ -z "$ym_vl_re" ]; then
-ym_vl_re=apple.com
+ym_vl_re=swcdn.apple.com
 fi
 echo "$ym_vl_re" > "$HOME/agsbx/ym_vl_re"
 echo "Reality域名：$ym_vl_re"
@@ -662,7 +732,7 @@ fi
 if [ -n "$arp" ]; then
 arp=arpt
 if [ -z "$ym_vl_re" ]; then
-ym_vl_re=apple.com
+ym_vl_re=swcdn.apple.com
 fi
 echo "$ym_vl_re" > "$HOME/agsbx/ym_vl_re"
 echo "Reality域名：$ym_vl_re"
@@ -961,39 +1031,7 @@ cat >> "$HOME/agsbx/xr.json" <<EOF
       "settings": {
       "domainStrategy":"${xryx}"
      }
-    },
-    {
-      "tag": "x-warp-out",
-      "protocol": "wireguard",
-      "settings": {
-        "secretKey": "${pvk}",
-        "address": [
-          "172.16.0.2/32",
-          "${wpv6}/128"
-        ],
-        "peers": [
-          {
-            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
-            "allowedIPs": [
-              "0.0.0.0/0",
-              "::/0"
-            ],
-            "endpoint": "${xendip}:2408"
-          }
-        ],
-        "reserved": ${res}
-        }
-    },
-    {
-      "tag":"warp-out",
-      "protocol":"freedom",
-        "settings":{
-        "domainStrategy":"${wxryx}"
-       },
-       "proxySettings":{
-       "tag":"x-warp-out"
-     }
-}
+    }${xwarp_outbounds}
   ],
   "routing": {
     "domainStrategy": "IPOnDemand",
@@ -1063,29 +1101,7 @@ cat >> "$HOME/agsbx/sb.json" <<EOF
       "tag": "direct"
     }
   ],
-  "endpoints": [
-    {
-      "type": "wireguard",
-      "tag": "warp-out",
-      "address": [
-        "172.16.0.2/32",
-        "${wpv6}/128"
-      ],
-      "private_key": "${pvk}",
-      "peers": [
-        {
-          "address": "${sendip}",
-          "port": 2408,
-          "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
-          "allowed_ips": [
-            "0.0.0.0/0",
-            "::/0"
-          ],
-          "reserved": $res
-        }
-      ]
-    }
-  ],
+  "endpoints": ${sbwarp_endpoints},
   "route": {
     "rules": [
        {
@@ -1422,7 +1438,7 @@ xvvmcdnym=$(cat "$HOME/agsbx/cdnym" 2>/dev/null)
 cdnip1=$(cat "$HOME/agsbx/cdnip1" 2>/dev/null)
 cdnip2=$(cat "$HOME/agsbx/cdnip2" 2>/dev/null)
 if grep -q 'agsbx/private.key' "$HOME/agsbx/sb.json" >/dev/null 2>&1 || grep -q 'agsbx/private.key' "$HOME/agsbx/xr.json" >/dev/null 2>&1; then
-sni=www.bing.com
+sni=www.icloud.com
 add=$server_ip
 jhins=1
 msins=true
@@ -1738,7 +1754,7 @@ fi
 if grep vmess-xr "$HOME/agsbx/xr.json" >/dev/null 2>&1 || grep vmess-sb "$HOME/agsbx/sb.json" >/dev/null 2>&1; then
 echo "💣【 Vmess-ws 】节点信息如下："
 port_vm_ws=$(cat "$HOME/agsbx/port_vm_ws")
-vm_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vm-ws-$hostname\", \"add\": \"$server_ip\", \"port\": \"$port_vm_ws\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"www.bing.com\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
+vm_link="vmess://$(echo "{ \"v\": \"2\", \"ps\": \"${sxname}vm-ws-$hostname\", \"add\": \"$server_ip\", \"port\": \"$port_vm_ws\", \"id\": \"$uuid\", \"aid\": \"0\", \"scy\": \"auto\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"www.icloud.com\", \"path\": \"/$uuid-vm\", \"tls\": \"\"}" | base64 -w0)"
 echo "$vm_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$vm_link"
 echo
@@ -1750,7 +1766,7 @@ cat <<EOF
             "tag": "${sxname}vmess-$hostname",
             "tls": {
                 "enabled": false,
-                "server_name": "www.bing.com",
+                "server_name": "www.icloud.com",
                 "insecure": false,
                 "utls": {
                     "enabled": true,
@@ -1760,7 +1776,7 @@ cat <<EOF
             "transport": {
                 "headers": {
                     "Host": [
-                        "www.bing.com"
+                        "www.icloud.com"
                     ]
                 },
                 "path": "$uuid-vm",
@@ -1787,11 +1803,11 @@ cat <<EOF
   udp: true
   tls: false
   network: ws
-  servername: www.bing.com                    
+  servername: www.icloud.com                    
   ws-opts:
     path: "$uuid-vm"                             
     headers:
-      Host: www.bing.com
+      Host: www.icloud.com
 EOF
 }
 clvmpt1(){
@@ -1972,7 +1988,7 @@ EOF
 else
 hyps=
 fi
-#hy2_link="hysteria2://$uuid@$server_ip:$port_hy2?security=tls&alpn=h3&insecure=1&allowInsecure=1$hyps&sni=www.bing.com#${sxname}hy2-$hostname"
+#hy2_link="hysteria2://$uuid@$server_ip:$port_hy2?security=tls&alpn=h3&insecure=1&allowInsecure=1$hyps&sni=www.icloud.com#${sxname}hy2-$hostname"
 hy2_link="hysteria2://$uuid@$add:$port_hy2?security=tls&alpn=h3&insecure=0&allowInsecure=0$hyps&sni=$sni&pinSHA256=$sha#${sxname}hy2-$hostname"
 echo "$hy2_link" >> "$HOME/agsbx/jhsub.txt"
 echo "$hy2_link"
@@ -2683,7 +2699,7 @@ echo "iptables执行开放所有端口"
 fi
 if [ ! -f "$HOME/agsbx/SHA256.txt" ]; then
 command -v openssl >/dev/null 2>&1 && openssl ecparam -genkey -name prime256v1 -out "$HOME/agsbx/private.key" >/dev/null 2>&1
-command -v openssl >/dev/null 2>&1 && openssl req -new -x509 -days 36500 -key "$HOME/agsbx/private.key" -out "$HOME/agsbx/cert.crt" -subj "/CN=www.bing.com" >/dev/null 2>&1
+command -v openssl >/dev/null 2>&1 && openssl req -new -x509 -days 36500 -key "$HOME/agsbx/private.key" -out "$HOME/agsbx/cert.crt" -subj "/CN=www.icloud.com" >/dev/null 2>&1
 #if [ ! -f "$HOME/agsbx/private.key" ]; then
 #url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/private.key"; out="$HOME/agsbx/private.key"; (command -v curl>/dev/null 2>&1 && curl -Ls -o "$out" --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -q -O "$out" --tries=2 "$url")
 #url="https://github.com/yonggekkk/argosbx/releases/download/argosbx/cert.crt"; out="$HOME/agsbx/cert.crt"; (command -v curl>/dev/null 2>&1 && curl -Ls -o "$out" --retry 2 "$url") || (command -v wget>/dev/null 2>&1 && timeout 3 wget -q -O "$out" --tries=2 "$url")
