@@ -399,7 +399,7 @@
         <div class="protocol-group separator">
           <h3>Xray可选协议：</h3>
           <div class="protocol-grid">
-            <label><input type="checkbox" data-proto="vlpt"> Vless-tcp-reality-vision <span class="pill">vlpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vlpt">
+            <label><input type="checkbox" data-proto="vlpt" checked> Vless-tcp-reality-vision <span class="pill">vlpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vlpt">
             <label><input type="checkbox" data-proto="xhpt"> Vless-xhttp-reality-enc <span class="pill">xhpt</span></label><input type="text" placeholder="留空则随机端口" data-port="xhpt">
             <label><input type="checkbox" data-proto="vxpt"> Vless-xhttp-enc <span class="pill">vxpt</span></label><input type="text" placeholder="留空则随机端口" data-port="vxpt">
             <label><input type="checkbox" data-proto="vwpt"> Vless-ws-enc <span class="pill">vwpt</span></label><input type="text" placeholder="留空则随机端口（Argo固定隧道的URL端口相同）" data-port="vwpt">
@@ -411,9 +411,9 @@
           <h3>Singbox可选协议：</h3>
           <div class="protocol-grid">
             <label><input type="checkbox" data-proto="tupt" checked> Tuic <span class="pill">tupt</span></label><input type="text" placeholder="留空则随机端口" data-port="tupt">
-            <label><input type="checkbox" data-proto="anpt" checked> AnyTLS <span class="pill">anpt</span></label><input type="text" placeholder="留空则随机端口" data-port="anpt">
+            <label><input type="checkbox" data-proto="anpt"> AnyTLS <span class="pill">anpt</span></label><input type="text" placeholder="留空则随机端口" data-port="anpt">
             <label><input type="checkbox" data-proto="nvpt" disabled> Naiveproxy <span class="pill">nvpt</span></label><input type="text" placeholder="启用域名IP证书TLS后可选，留空则随机端口" data-port="nvpt" disabled>
-            <label><input type="checkbox" data-proto="arpt" checked> Any-reality <span class="pill">arpt</span></label><input type="text" placeholder="留空则随机端口" data-port="arpt">
+            <label><input type="checkbox" data-proto="arpt"> Any-reality <span class="pill">arpt</span></label><input type="text" placeholder="留空则随机端口" data-port="arpt">
             <label><input type="checkbox" data-proto="sspt"> Shadowsocks-2022 <span class="pill">sspt</span></label><input type="text" placeholder="留空则随机端口" data-port="sspt">
           </div>
         </div>
@@ -436,7 +436,7 @@
             <button id="generateUuidBtn" type="button" class="primary">生成 UUID</button>
           </div>
         </div>
-        <div class="row"><label>Reality 域名 <span class="pill">reym</span></label><input id="reym" type="text" placeholder="选择Reality相关协议后可用，留空默认apple.com" value="swcdn.apple.com" disabled/></div>
+        <div class="row"><label>Reality 域名 <span class="pill">reym</span></label><input id="reym" type="text" placeholder="选择Reality相关协议后可用，留空默认swcdn.apple.com" value="swcdn.apple.com" disabled/></div>
         <div class="row"><label>AnyTLS 自定义网址 <span class="pill">ansni</span></label><input id="ansni" type="text" placeholder="留空则跟 Reality 域名一致"/></div>
         <div class="row"><label>CDN优选IP域名 <span class="pill">cfip</span></label><input id="cfip" type="text" placeholder="支持2个优选IP域名(空格间隔)，留空默认优选域名" disabled></div>
         <div class="row"><label>启用域名IP证书TLS <span class="pill">alns</span></label>
